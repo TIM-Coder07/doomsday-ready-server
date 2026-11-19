@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import movieRoutes from "./routes/movieRoutes";
+import cinemaRoutes from "./routes/cinemaRoutes";
 import { notFound, errorHandler } from "./middlewares/errorHandler";
 
 const app = express();
@@ -11,9 +13,8 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Routes will be added here:
-// app.use("/api/movies", movieRoutes);
-// app.use("/api/cinemas", cinemaRoutes);
+app.use("/api/movies", movieRoutes);
+app.use("/api/cinemas", cinemaRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
