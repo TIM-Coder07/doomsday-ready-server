@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { notFound, errorHandler } from "./middlewares/errorHandler";
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get("/api/health", (_req, res) => {
 // app.use("/api/movies", movieRoutes);
 // app.use("/api/cinemas", cinemaRoutes);
 
-// The error handler will be added here, after the routes.
+app.use(notFound);
+app.use(errorHandler);
 
 export default app;
