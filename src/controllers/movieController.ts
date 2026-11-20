@@ -3,6 +3,28 @@ import { Movie } from "../models/Movie";
 import { AppError } from "../utils/AppError";
 import { createMovieSchema, updateMovieSchema } from "../validators/movieSchema";
 import { getRewatchOrder } from "../services/rewatchOrder";
+import { wouldCreateCycle } from "../services/cycleCheck";
+
+// Every movie id mapped to its current prerequisite ids
+async function loadGraph(): Promise<Map<string, string[]>> {
+  const movies = await Movie.find({}, { prerequisites: 1 }).lean();
+  return new Map(movies.map((m) => [String(m._id), (m.prerequisites ?? []).map(String)]));
+}
+
+// Throws 409 if saving these prerequisites would make the movie depend on itself
+async function rejectCycle(movieId: string | null, prerequisites: string[]): Promise<void> {
+  if (movieId === null || prerequisites.length === 0) {
+    return;
+  }
+  const graph = await loadGraph();
+  if (wouldCreateCycle(movieId, prerequisites, graph)) {
+    throw new AppError(
+      409,
+      "CIRCULAR_DEPENDENCY",
+      "These prerequisites would make the movie depend on itself"
+    );
+  }
+}
 
 // Removes repeated ids and makes sure every prerequisite is a real movie
 async function checkPrerequisites(ids: string[]): Promise<string[]> {
@@ -20,7 +42,8 @@ export async function createMovie(req: Request, res: Response) {
   const data = createMovieSchema.parse(req.body);
   const prerequisites = await checkPrerequisites(data.prerequisites ?? []);
 
-  // TODO (next step): reject with 409 CIRCULAR_DEPENDENCY if this would create a cycle
+  // A brand new movie has no id yet, so nothing can point back to it: no cycle possible
+  await rejectCycle(null, prerequisites);
 
   const movie = await Movie.create({ ...data, prerequisites });
   res.status(201).json(movie);
@@ -43,8 +66,7 @@ export async function updateMovie(req: Request, res: Response) {
 
   if (data.prerequisites) {
     data.prerequisites = await checkPrerequisites(data.prerequisites);
-
-    // TODO (next step): reject with 409 CIRCULAR_DEPENDENCY if this would create a cycle
+    await rejectCycle(String(movie._id), data.prerequisites);
   }
 
   movie.set(data);

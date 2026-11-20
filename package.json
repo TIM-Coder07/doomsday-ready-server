@@ -2,11 +2,13 @@
   "name": "doomsday-ready-server",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
+    "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:reset": "tsx src/scripts/seed.ts --reset",
+    "seed:prod": "node dist/scripts/seed.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
