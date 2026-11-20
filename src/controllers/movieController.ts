@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Movie } from "../models/Movie";
 import { AppError } from "../utils/AppError";
 import { createMovieSchema, updateMovieSchema } from "../validators/movieSchema";
+import { getRewatchOrder } from "../services/rewatchOrder";
 
 // Removes repeated ids and makes sure every prerequisite is a real movie
 async function checkPrerequisites(ids: string[]): Promise<string[]> {
@@ -49,4 +50,31 @@ export async function updateMovie(req: Request, res: Response) {
   movie.set(data);
   await movie.save();
   res.json(movie);
+}
+
+// GET /api/movies/:id/rewatch-order
+export async function getMovieRewatchOrder(req: Request, res: Response) {
+  const target = await Movie.findById(req.params.id);
+  if (!target) {
+    throw new AppError(404, "NOT_FOUND", "Movie not found");
+  }
+
+  const allMovies = await Movie.find();
+  const moviesById = new Map(allMovies.map((m) => [String(m._id), m]));
+  const graph = new Map(allMovies.map((m) => [String(m._id), m.prerequisites.map(String)]));
+
+  // Ids in watch order, then turned back into full movies
+  const orderedIds = getRewatchOrder(String(target._id), graph);
+  const order = orderedIds.flatMap((id) => moviesById.get(id) ?? []);
+
+  const watchedCount = order.filter((m) => m.watched).length;
+  const remainingRuntime = order.filter((m) => !m.watched).reduce((sum, m) => sum + m.runtime, 0);
+
+  res.json({
+    target: { id: String(target._id), title: target.title },
+    order,
+    watchedCount,
+    totalCount: order.length,
+    remainingRuntime,
+  });
 }
