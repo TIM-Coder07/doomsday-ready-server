@@ -1,3 +1,4 @@
+
 import "dotenv/config";
 import app from "./app";
 import { connectDB } from "./config/db";
@@ -8,12 +9,8 @@ async function start(): Promise<void> {
   try {
     await connectDB();
 
-    app.listen(PORT, (error?: Error) => {
-      if (error) {
-        console.error("Failed to start server:", error.message);
-        process.exit(1);
-      }
-      console.log(`Server running on http://localhost:${PORT}`);
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
